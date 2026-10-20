@@ -119,16 +119,25 @@ class DropoutPredictor:
             values = values[:, :, 1]
         return values.reshape(-1)
 
-    def explain_row(self, raw_row, feature_row, X_row, top_n=5, risk_level=None):
+    def explain_row(
+        self,
+        raw_row,
+        feature_row,
+        X_row,
+        top_n=5,
+        risk_level=None,
+        allowed_features=None,
+    ):
         shap_values = self._shap_values(X_row)
         if shap_values.shape[0] != len(self.feature_columns):
             raise ValueError("SHAP output does not match the saved feature columns.")
 
-        absolute_values = np.abs(shap_values)
-        total = float(absolute_values.sum()) or 1.0
+        allowed = set(allowed_features) if allowed_features is not None else None
         records = []
 
         for index, feature in enumerate(self.feature_columns):
+            if allowed is not None and feature not in allowed:
+                continue
             if feature in raw_row.columns:
                 value = raw_row.iloc[0][feature]
             else:
@@ -146,12 +155,18 @@ class DropoutPredictor:
                     "value": value,
                     "encoded_value": round(float(X_row.iloc[0][feature]), 6),
                     "shap_value": round(shap_value, 6),
-                    "percent_contribution": round(
-                        100 * abs(shap_value) / total, 2
-                    ),
                     "direction": direction,
                     "reason": reason_text(feature, value, direction),
                 }
+            )
+
+        if not records:
+            return [], []
+
+        total = sum(abs(row["shap_value"]) for row in records) or 1.0
+        for row in records:
+            row["percent_contribution"] = round(
+                100 * abs(row["shap_value"]) / total, 2
             )
 
         positive = sorted(
@@ -232,8 +247,12 @@ class DropoutPredictor:
                 unique.append(item)
         return unique[:6]
 
-    def predict(self, input_data: dict) -> dict:
-        """Predict one student and return a JSON-compatible explanation."""
+    def predict(self, input_data: dict, explanation_features=None) -> dict:
+        """Predict one student and return a JSON-compatible explanation.
+
+        Pass ``explanation_features`` to limit SHAP reasons to the fields that
+        were actually collected by a simplified form.
+        """
         input_data = dict(input_data or {})
         unknown_fields = [
             field for field in input_data if field not in self.raw_features
@@ -266,7 +285,11 @@ class DropoutPredictor:
         probability = float(self.model.predict_proba(X_row)[0, 1])
         risk = self.risk_level(probability)
         top_reasons, category_contributions = self.explain_row(
-            raw_row, feature_row, X_row, risk_level=risk
+            raw_row,
+            feature_row,
+            X_row,
+            risk_level=risk,
+            allowed_features=explanation_features,
         )
         recommendations = self.recommend(
             category_contributions, top_reasons, risk
@@ -297,6 +320,8 @@ def get_predictor() -> DropoutPredictor:
     return _DEFAULT_PREDICTOR
 
 
-def predict_dropout(input_data: dict) -> dict:
+def predict_dropout(input_data: dict, explanation_features=None) -> dict:
     """Convenience function used by the chatbot and notebooks."""
-    return get_predictor().predict(input_data)
+    return get_predictor().predict(
+        input_data, explanation_features=explanation_features
+    )

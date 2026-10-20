@@ -36,6 +36,15 @@ dataset_outliers_removed_balanced.csv
 Expected columns include the 36 UCI student-performance features plus `Target`
 with values `Graduate`, `Dropout`, or `Enrolled`.
 
+The training notebook uses the full feature set. The app deliberately asks for
+only 14 high-signal fields: course, age, gender, displaced status, admission
+grade, semester 1/2 enrolled units, approved units, grades, tuition-fee status,
+debt status, and scholarship status. Course names, female/male, and no/yes
+choices are shown as text instead of numeric codes. Background details such as
+marital status, nationality, family occupation, application mode, and macro
+indicators are filled with typical training values and are left out of the
+visible key-factor list.
+
 The file name says "balanced", but the version used here has:
 
 ```text
@@ -54,8 +63,8 @@ applied. Outliers are not removed again.
    to the notebook's working directory).
 3. Import/download `kaggle/Student_Dropout_Kaggle.ipynb` and open it in Kaggle.
 4. Click **Run all**.
-5. Use the ipywidgets form at the bottom to make predictions and ask the assistant
-   for explanations or recommendations.
+5. Use the 14-field ipywidgets form at the bottom to make predictions and ask
+   the assistant for explanations or recommendations.
 6. Download `/kaggle/working/student_dropout_project.zip` from the notebook output.
 
 The notebook searches `/kaggle/input` for the CSV by filename, so the Kaggle
@@ -70,9 +79,11 @@ pip install -r requirements.txt
 streamlit run app/chatbot_app.py
 ```
 
-The app loads the saved artifacts and never retrains the model. It was tested
-with Streamlit 1.66; `requirements.txt` uses 1.50+ because the app uses the
-current `width` API.
+The app loads the saved artifacts and never retrains the model. It asks for the
+14 core fields, uses readable labels for coded values, and fills omitted
+background fields with typical training values. It was tested with Streamlit
+1.66; `requirements.txt` uses 1.50+ because the app uses the current `width`
+API.
 
 ## Project structure
 
@@ -123,35 +134,33 @@ before each step:
 11. Global SHAP explanation and category contribution.
 12. Save model artifacts and default input values.
 13. Prediction, SHAP explanation, and recommendation module.
-14. Kaggle ipywidgets chatbot.
+14. Kaggle ipywidgets chatbot with the 14-field form.
 15. Export Streamlit app, README, requirements, and ZIP.
 
 ## Example input
 
 ```python
 student = {
-    "Marital status": 1,
-    "Application mode": 1,
-    "Course": 9500,
-    "Admission grade": 120.0,
+    "Course": 9500,                  # Nursing
     "Age at enrollment": 20,
-    "Debtor": 0,
-    "Tuition fees up to date": 1,
-    "Scholarship holder": 0,
+    "Gender": 0,                     # Female
+    "Displaced": 0,                  # No
+    "Admission grade": 120.0,
     "Curricular units 1st sem (enrolled)": 6,
     "Curricular units 1st sem (approved)": 4,
     "Curricular units 1st sem (grade)": 12.0,
     "Curricular units 2nd sem (enrolled)": 6,
     "Curricular units 2nd sem (approved)": 3,
     "Curricular units 2nd sem (grade)": 11.0,
-    "Unemployment rate": 10.8,
-    "Inflation rate": 1.4,
-    "GDP": 1.74,
+    "Tuition fees up to date": 1,    # Yes
+    "Debtor": 0,                     # No
+    "Scholarship holder": 0,         # No
 }
 ```
 
-Any omitted field is filled with a training median or mode, and the prediction
-response lists those fields.
+Any omitted field is filled with a training median or mode. The app passes
+typical values for the background fields it does not ask for and filters those
+fields out of the visible explanation.
 
 ## Example output shape
 
@@ -210,4 +219,3 @@ The tuned threshold (selected on validation data) is used for the binary
 - Preprocessing fitted on training data only
 - Threshold tuned on validation data only
 - Test set used only for final evaluation
-"# Student-Dropout-Prediction" 

@@ -1,4 +1,4 @@
-﻿"""Streamlit chatbot for student dropout risk (local version)."""
+"""Streamlit chatbot for student dropout risk (local version)."""
 
 from __future__ import annotations
 
@@ -15,9 +15,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.feature_engineering import (
-    BINARY_FLAG_COLS,
-    CATEGORICAL_CODE_COLS,
-    binary_options,
+    APP_EXPLANATION_FEATURES,
+    APP_INPUT_FIELDS,
+    APP_SECTIONS,
+    INT_INPUT_FIELDS,
+    field_options,
     pretty_name,
 )
 from src.predict import get_predictor
@@ -44,92 +46,70 @@ except Exception as exc:
     st.stop()
 
 DEFAULTS = predictor.default_input_values
-RAW_FEATURES = predictor.raw_features
+ALL_FEATURES = predictor.raw_features
+INPUT_FIELDS = list(APP_INPUT_FIELDS)
+HIDDEN_FIELDS = [field for field in ALL_FEATURES if field not in INPUT_FIELDS]
 
-SECTIONS = {
-    "Basic Information": [
-        "Marital status",
-        "Application mode",
-        "Application order",
-        "Course",
-        "Daytime/evening attendance",
-        "Previous qualification",
-        "Nacionality",
-        "Gender",
-        "Age at enrollment",
-        "International",
-        "Displaced",
-        "Educational special needs",
-    ],
-    "Family Background": [
-        "Mother's qualification",
-        "Father's qualification",
-        "Mother's occupation",
-        "Father's occupation",
-    ],
-    "Academic Entry": [
-        "Previous qualification (grade)",
-        "Admission grade",
-    ],
-    "Financial Information": [
-        "Debtor",
-        "Tuition fees up to date",
-        "Scholarship holder",
-    ],
-    "Semester 1 Performance": [
-        "Curricular units 1st sem (credited)",
-        "Curricular units 1st sem (enrolled)",
-        "Curricular units 1st sem (evaluations)",
-        "Curricular units 1st sem (approved)",
-        "Curricular units 1st sem (grade)",
-        "Curricular units 1st sem (without evaluations)",
-    ],
-    "Semester 2 Performance": [
-        "Curricular units 2nd sem (credited)",
-        "Curricular units 2nd sem (enrolled)",
-        "Curricular units 2nd sem (evaluations)",
-        "Curricular units 2nd sem (approved)",
-        "Curricular units 2nd sem (grade)",
-        "Curricular units 2nd sem (without evaluations)",
-    ],
-    "Economic Indicators": [
-        "Unemployment rate",
-        "Inflation rate",
-        "GDP",
-    ],
+FIELD_HELP = {
+    "Course": "Select the course the student is enrolled in.",
+    "Age at enrollment": "Age when the student started the course.",
+    "Gender": "Recorded in the dataset as female or male.",
+    "Displaced": "The student moved away from home to study.",
+    "Admission grade": "Admission score on the 0-200 scale.",
+    "Curricular units 1st sem (enrolled)": "Units enrolled in semester 1.",
+    "Curricular units 1st sem (approved)": "Units approved in semester 1.",
+    "Curricular units 1st sem (grade)": "Average grade in semester 1 (0-20).",
+    "Curricular units 2nd sem (enrolled)": "Units enrolled in semester 2.",
+    "Curricular units 2nd sem (approved)": "Units approved in semester 2.",
+    "Curricular units 2nd sem (grade)": "Average grade in semester 2 (0-20).",
+    "Tuition fees up to date": "Whether tuition fees are currently paid.",
+    "Debtor": "Whether the student has outstanding debt.",
+    "Scholarship holder": "Whether the student receives a scholarship.",
 }
 
-RISK_COLORS = {
-    "Low": "#2e7d32",
-    "Medium": "#f9a825",
-    "High": "#ef6c00",
-    "Critical": "#c62828",
+FIELD_RANGES = {
+    "Age at enrollment": (16, 80, 1),
+    "Admission grade": (0.0, 200.0, 0.1),
+    "Curricular units 1st sem (enrolled)": (0, 30, 1),
+    "Curricular units 1st sem (approved)": (0, 30, 1),
+    "Curricular units 1st sem (grade)": (0.0, 20.0, 0.1),
+    "Curricular units 2nd sem (enrolled)": (0, 30, 1),
+    "Curricular units 2nd sem (approved)": (0, 30, 1),
+    "Curricular units 2nd sem (grade)": (0.0, 20.0, 0.1),
 }
 
 HIGH_RISK_UPDATES = {
+    "Course": 9500,
+    "Age at enrollment": 21,
+    "Gender": 0,
+    "Displaced": 0,
+    "Admission grade": 95.0,
     "Curricular units 1st sem (enrolled)": 6,
     "Curricular units 1st sem (approved)": 0,
     "Curricular units 1st sem (grade)": 0.0,
     "Curricular units 2nd sem (enrolled)": 6,
     "Curricular units 2nd sem (approved)": 0,
     "Curricular units 2nd sem (grade)": 0.0,
-    "Debtor": 1,
     "Tuition fees up to date": 0,
+    "Debtor": 1,
     "Scholarship holder": 0,
-    "Admission grade": 95.0,
 }
 
 LOW_RISK_UPDATES = {
+    "Course": 9500,
+    "Age at enrollment": 19,
+    "Gender": 0,
+    "Displaced": 0,
+    "Admission grade": 150.0,
     "Curricular units 1st sem (enrolled)": 6,
     "Curricular units 1st sem (approved)": 6,
     "Curricular units 1st sem (grade)": 16.0,
     "Curricular units 2nd sem (enrolled)": 6,
     "Curricular units 2nd sem (approved)": 6,
     "Curricular units 2nd sem (grade)": 16.0,
-    "Debtor": 0,
     "Tuition fees up to date": 1,
+    "Debtor": 0,
     "Scholarship holder": 1,
-    "Admission grade": 150.0,
 }
 
 
@@ -137,67 +117,123 @@ def field_key(field: str) -> str:
     return f"input_{field}"
 
 
-for field in RAW_FEATURES:
-    st.session_state.setdefault(field_key(field), DEFAULTS[field])
+def default_value(field: str):
+    value = DEFAULTS[field]
+    return int(value) if field in INT_INPUT_FIELDS else value
+
+
+for field in INPUT_FIELDS:
+    st.session_state.setdefault(field_key(field), default_value(field))
 
 
 def reset_defaults():
-    for field in RAW_FEATURES:
-        st.session_state[field_key(field)] = DEFAULTS[field]
+    for field in INPUT_FIELDS:
+        st.session_state[field_key(field)] = default_value(field)
 
 
 def load_example(kind: str):
     reset_defaults()
     updates = HIGH_RISK_UPDATES if kind == "high" else LOW_RISK_UPDATES
     for field, value in updates.items():
-        st.session_state[field_key(field)] = value
+        if field in INPUT_FIELDS:
+            st.session_state[field_key(field)] = value
+
+
+def current_values() -> dict:
+    return {field: st.session_state[field_key(field)] for field in INPUT_FIELDS}
+
+
+def full_input(values: dict) -> dict:
+    """Combine the form values with typical values for background fields."""
+    return {**DEFAULTS, **values}
+
+
+def validation_errors(values: dict) -> list[str]:
+    errors = []
+    for semester, label in (("1st", "1"), ("2nd", "2")):
+        enrolled = values[f"Curricular units {semester} sem (enrolled)"]
+        approved = values[f"Curricular units {semester} sem (approved)"]
+        if approved > enrolled:
+            errors.append(
+                f"Semester {label}: approved units cannot exceed enrolled units."
+            )
+    return errors
 
 
 def render_field(field: str):
     label = pretty_name(field)
     key = field_key(field)
+    help_text = FIELD_HELP.get(field)
+    options = field_options(field)
 
-    if field in BINARY_FLAG_COLS:
-        labels = {value: text for text, value in binary_options(field)}
-        st.selectbox(
+    if options:
+        values = [value for _, value in options]
+        labels = {value: text for text, value in options}
+        if len(options) <= 3:
+            st.segmented_control(
+                label,
+                options=values,
+                format_func=lambda value: labels[value],
+                key=key,
+                help=help_text,
+                required=True,
+                width="stretch",
+            )
+        else:
+            st.selectbox(
+                label,
+                options=values,
+                format_func=lambda value: labels[value],
+                key=key,
+                help=help_text,
+            )
+        return
+
+    minimum, maximum, step = FIELD_RANGES.get(field, (0.0, None, 0.1))
+    if field in INT_INPUT_FIELDS:
+        st.number_input(
             label,
-            options=[0, 1],
-            format_func=lambda value: labels[value],
+            min_value=int(minimum),
+            max_value=int(maximum) if maximum is not None else None,
+            step=int(step),
             key=key,
+            help=help_text,
         )
-    elif field in CATEGORICAL_CODE_COLS or field == "Age at enrollment":
-        st.number_input(label, min_value=0, step=1, key=key)
     else:
-        st.number_input(label, step=0.1, format="%.2f", key=key)
+        st.number_input(
+            label,
+            min_value=float(minimum),
+            max_value=float(maximum) if maximum is not None else None,
+            step=float(step),
+            format="%.2f",
+            key=key,
+            help=help_text,
+        )
 
 
 def show_result(result: dict):
     probability = result["dropout_probability"]
     risk = result["risk_level"]
-    color = RISK_COLORS.get(risk, "#555555")
 
-    st.markdown(
-        f"""
-        <div style="border:1px solid #e0e0e0;border-radius:14px;padding:20px;margin:10px 0;
-                    background:linear-gradient(135deg,#ffffff,#f7f9fc)">
-            <div style="font-size:14px;color:#666">Estimated dropout probability</div>
-            <div style="font-size:46px;font-weight:700;line-height:1.1">{result['dropout_probability_percent']}%</div>
-            <div style="font-size:20px;font-weight:600;color:{color};margin-top:6px">Risk level: {risk}</div>
-            <div style="font-size:13px;color:#777;margin-top:6px">
-                Decision threshold: {result['threshold_used']:.2f} -
-                Classification: {'higher risk' if result['predicted_dropout'] else 'not flagged'}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.progress(min(max(probability, 0.0), 1.0))
-
-    if result["missing_fields_filled"]:
-        labels = [pretty_name(field) for field in result["missing_fields_filled"]]
-        st.warning(
-            "Some missing values were filled using typical training data values: "
-            + ", ".join(labels)
+    with st.container(border=True):
+        left, right = st.columns([2, 1])
+        with left:
+            st.metric(
+                "Estimated dropout probability",
+                f"{result['dropout_probability_percent']}%",
+            )
+            st.progress(min(max(probability, 0.0), 1.0))
+        with right:
+            st.metric("Risk level", risk)
+            st.caption(
+                "Flagged for review"
+                if result["predicted_dropout"]
+                else "Not flagged"
+            )
+        st.caption(
+            f"Decision threshold: {result['threshold_used']:.2f}. "
+            "The estimate uses the form fields plus typical values for "
+            "background details that are not requested."
         )
 
     st.subheader("Key factors")
@@ -205,16 +241,20 @@ def show_result(result: dict):
         [
             {
                 "Reason": item["reason"],
-                "Category": item["category"],
-                "Contribution": f"{item['percent_contribution']:.1f}%",
+                "Area": item["category"],
+                "Share": f"{item['percent_contribution']:.1f}%",
                 "Direction": item["direction"],
             }
-            for item in result["top_reasons"]
+            for item in result["top_reasons"][:5]
         ]
     )
     st.dataframe(reasons, width="stretch", hide_index=True)
+    st.caption(
+        "Only the fields in the form are shown here. Background fields are held "
+        "at typical values and are excluded from this list."
+    )
 
-    st.subheader("Category contribution")
+    st.subheader("Where the estimate comes from")
     category_df = pd.DataFrame(result["category_contributions"])
     if not category_df.empty:
         figure = px.bar(
@@ -234,14 +274,18 @@ def show_result(result: dict):
         figure.update_layout(
             showlegend=False,
             coloraxis_showscale=False,
-            height=340,
+            height=300,
             margin=dict(l=10, r=40, t=20, b=20),
             xaxis_range=[0, max(60, category_df["percent_contribution"].max() * 1.2)],
         )
-        st.plotly_chart(figure, width="stretch")
+        st.plotly_chart(
+            figure,
+            width="stretch",
+            alt="Bar chart of explanation share by category",
+        )
 
     st.subheader("Recommended actions")
-    for recommendation in result["recommendations"]:
+    for recommendation in result["recommendations"][:4]:
         st.markdown(f"- {recommendation}")
 
     st.caption(result["disclaimer"])
@@ -249,49 +293,60 @@ def show_result(result: dict):
 
 st.title("Student Dropout Risk Assistant")
 st.markdown(
-    "Enter student information to estimate dropout risk and receive supportive "
-    "recommendations. This tool is designed for early support, not punishment."
+    "Enter the core details below to estimate dropout risk and receive "
+    "supportive recommendations. This tool is designed for early support, "
+    "not punishment."
 )
 st.info(
     "This prediction is a decision-support tool. Human review is required before "
-    "any academic or financial action is taken."
+    "any academic or financial action is taken.",
+    title="Use with human review",
 )
 
-button_col1, button_col2, button_col3 = st.columns(3)
-button_col1.button(
-    "Use Default Sample Student",
-    on_click=reset_defaults,
-    width="stretch",
-)
-button_col2.button(
-    "Load High-Risk Example",
-    on_click=functools.partial(load_example, "high"),
-    width="stretch",
-)
-button_col3.button(
-    "Load Low-Risk Example",
-    on_click=functools.partial(load_example, "low"),
-    width="stretch",
-)
+with st.container(horizontal=True):
+    st.button("Use typical student", on_click=reset_defaults)
+    st.button(
+        "High-risk example",
+        on_click=functools.partial(load_example, "high"),
+    )
+    st.button(
+        "Low-risk example",
+        on_click=functools.partial(load_example, "low"),
+    )
 
 with st.form("assessment_form"):
-    for section, fields in SECTIONS.items():
+    for section, fields in APP_SECTIONS.items():
         st.markdown(f"#### {section}")
         columns = st.columns(2)
         for index, field in enumerate(fields):
             with columns[index % 2]:
                 render_field(field)
+
+    st.caption(
+        f"Only these {len(INPUT_FIELDS)} fields are requested. Marital status, "
+        "nationality, family occupation, application details, and macro "
+        "indicators are not needed for the estimate; they use typical training "
+        "values."
+    )
     submitted = st.form_submit_button(
-        "Predict Risk", type="primary", width="stretch"
+        "Predict risk", type="primary", width="stretch"
     )
 
 if submitted:
-    values = {field: st.session_state[field_key(field)] for field in RAW_FEATURES}
-    try:
-        st.session_state["result"] = predictor.predict(values)
-    except Exception as exc:
-        st.error("The prediction could not be generated.")
-        st.exception(exc)
+    values = current_values()
+    errors = validation_errors(values)
+    if errors:
+        for error in errors:
+            st.error(error)
+    else:
+        try:
+            st.session_state["result"] = predictor.predict(
+                full_input(values),
+                explanation_features=APP_EXPLANATION_FEATURES,
+            )
+        except Exception as exc:
+            st.error("The prediction could not be generated.")
+            st.exception(exc)
 
 result = st.session_state.get("result")
 if result:
@@ -300,7 +355,7 @@ if result:
 st.divider()
 st.subheader("Ask the assistant")
 st.caption(
-    "Commands: `predict`, `use default student`, `explain risk`, "
+    "Commands: `predict`, `use typical student`, `explain risk`, "
     "`show recommendations`."
 )
 
@@ -317,22 +372,32 @@ if prompt:
     command = prompt.strip().lower()
 
     if command in {"predict", "predict risk"}:
-        values = {
-            field: st.session_state[field_key(field)] for field in RAW_FEATURES
-        }
-        result = predictor.predict(values)
-        st.session_state["result"] = result
-        reply = (
-            f"Estimated dropout probability is **{result['dropout_probability_percent']}%** "
-            f"({result['risk_level']} risk)."
-        )
-    elif command in {"use default student", "default"}:
+        values = current_values()
+        errors = validation_errors(values)
+        if errors:
+            reply = "Please fix the form first: " + " ".join(errors)
+        else:
+            result = predictor.predict(
+                full_input(values),
+                explanation_features=APP_EXPLANATION_FEATURES,
+            )
+            st.session_state["result"] = result
+            reply = (
+                f"Estimated dropout probability is "
+                f"**{result['dropout_probability_percent']}%** "
+                f"({result['risk_level']} risk)."
+            )
+    elif command in {"use typical student", "use default student", "default"}:
         reset_defaults()
-        result = predictor.predict(dict(DEFAULTS))
+        result = predictor.predict(
+            dict(DEFAULTS),
+            explanation_features=APP_EXPLANATION_FEATURES,
+        )
         st.session_state["result"] = result
         reply = (
-            "Loaded the default sample student. "
-            f"Estimated dropout probability is **{result['dropout_probability_percent']}%** "
+            "Loaded the typical student. "
+            f"Estimated dropout probability is "
+            f"**{result['dropout_probability_percent']}%** "
             f"({result['risk_level']} risk)."
         )
     elif command in {"explain risk", "explain"}:
@@ -356,7 +421,7 @@ if prompt:
             reply = "Please run a prediction first."
     else:
         reply = (
-            "I can help with: `predict`, `use default student`, "
+            "I can help with: `predict`, `use typical student`, "
             "`explain risk`, `show recommendations`."
         )
 
@@ -366,7 +431,11 @@ if prompt:
 with st.sidebar:
     st.header("Model information")
     st.metric("Decision threshold", f"{predictor.threshold:.2f}")
-    st.metric("Features used", len(predictor.feature_columns))
+    st.metric("Form fields", len(INPUT_FIELDS))
+    st.caption(
+        f"The model uses {len(predictor.feature_columns)} internal features. "
+        f"The other {len(HIDDEN_FIELDS)} background fields use typical values."
+    )
     st.caption("Artifacts are loaded from models/. The app never retrains.")
     st.divider()
     st.markdown("**Risk bands**")

@@ -31,6 +31,64 @@ BINARY_FLAG_COLS = [
     "International",
 ]
 
+# The simplified form asks only for the fields that carry the strongest,
+# practical signal. The trained model still uses its full feature set; omitted
+# background fields are filled with typical training values and are not shown
+# in the key-factor list.
+APP_SECTIONS = {
+    "Student details": [
+        "Course",
+        "Age at enrollment",
+        "Gender",
+        "Displaced",
+    ],
+    "Academic performance": [
+        "Admission grade",
+        "Curricular units 1st sem (enrolled)",
+        "Curricular units 1st sem (approved)",
+        "Curricular units 1st sem (grade)",
+        "Curricular units 2nd sem (enrolled)",
+        "Curricular units 2nd sem (approved)",
+        "Curricular units 2nd sem (grade)",
+    ],
+    "Financial support": [
+        "Tuition fees up to date",
+        "Debtor",
+        "Scholarship holder",
+    ],
+}
+APP_INPUT_FIELDS = [field for fields in APP_SECTIONS.values() for field in fields]
+
+INT_INPUT_FIELDS = {
+    "Age at enrollment",
+    "Curricular units 1st sem (enrolled)",
+    "Curricular units 1st sem (approved)",
+    "Curricular units 2nd sem (enrolled)",
+    "Curricular units 2nd sem (approved)",
+}
+
+# Raw UCI course codes used by this dataset. The app shows the names instead
+# of asking people to remember the numeric codes.
+COURSE_LABELS = {
+    33: "Biofuel Production Technologies",
+    171: "Animation and Multimedia Design",
+    8014: "Social Service (evening attendance)",
+    9003: "Agronomy",
+    9070: "Communication Design",
+    9085: "Veterinary Nursing",
+    9119: "Informatics Engineering",
+    9130: "Equiniculture",
+    9147: "Management",
+    9238: "Social Service",
+    9254: "Tourism",
+    9500: "Nursing",
+    9556: "Oral Hygiene",
+    9670: "Advertising and Marketing Management",
+    9773: "Journalism and Communication",
+    9853: "Basic Education",
+    9991: "Management (evening attendance)",
+}
+
 MACRO_COLS = ["Unemployment rate", "Inflation rate", "GDP"]
 
 FINANCIAL_FEATURES = {"Debtor", "Tuition fees up to date", "Scholarship holder"}
@@ -67,6 +125,33 @@ INSTITUTIONAL_FEATURES = {
 }
 
 MACRO_FEATURES = set(MACRO_COLS)
+
+# Features that are fully determined by the simplified form. Explanations are
+# filtered to this set so the app never presents a background field that the
+# user did not enter as a key factor.
+APP_EXPLANATION_FEATURES = set(APP_INPUT_FIELDS) | {
+    "total_enrolled_units",
+    "total_approved_units",
+    "failed_units_sem1",
+    "failed_units_sem2",
+    "total_failed_units",
+    "approval_rate_sem1",
+    "approval_rate_sem2",
+    "overall_approval_rate",
+    "effective_avg_grade_sem1",
+    "effective_avg_grade_sem2",
+    "overall_average_grade",
+    "grade_difference_sem2_minus_sem1",
+    "approved_difference_sem2_minus_sem1",
+    "approval_rate_difference_sem2_minus_sem1",
+    "failed_difference_sem2_minus_sem1",
+    "no_approved_sem1",
+    "no_approved_sem2",
+    "no_approved_both_semesters",
+    "low_approval_sem1",
+    "low_approval_sem2",
+    "low_approval_both_semesters",
+}
 
 DISPLAY_NAMES = {
     "Marital status": "Marital status",
@@ -274,12 +359,16 @@ BINARY_LABELS = {
     "Educational special needs": ("No educational special needs", "Educational special needs"),
     "International": ("Domestic student", "International student"),
     "Daytime/evening attendance": ("Evening attendance", "Daytime attendance"),
-    "Gender": ("Gender code 0", "Gender code 1"),
+    "Gender": ("Female", "Male"),
 }
 
 BINARY_OPTION_LABELS = {
     "Daytime/evening attendance": ("Evening", "Daytime"),
-    "Gender": ("Code 0", "Code 1"),
+    "Gender": ("Female", "Male"),
+    "Displaced": ("No", "Yes"),
+    "Debtor": ("No", "Yes"),
+    "Tuition fees up to date": ("No", "Yes"),
+    "Scholarship holder": ("No", "Yes"),
 }
 
 
@@ -287,6 +376,21 @@ def binary_options(field: str):
     """Return (label, value) choices for a binary form field."""
     no_label, yes_label = BINARY_OPTION_LABELS.get(field, ("No", "Yes"))
     return [(no_label, 0), (yes_label, 1)]
+
+
+def field_options(field: str):
+    """Return (display label, code) choices for a categorical form field."""
+    if field == "Course":
+        return [
+            (label, code)
+            for code, label in sorted(
+                COURSE_LABELS.items(), key=lambda item: item[1]
+            )
+        ]
+    if field in BINARY_FLAG_COLS:
+        return binary_options(field)
+    return None
+
 
 COUNT_FEATURES = {
     "Age at enrollment",
@@ -359,12 +463,17 @@ def reason_text(feature: str, value, direction: str) -> str:
         return f"Semester 2 approval-rate change ({format_value(feature, value)})"
     if feature == "failed_difference_sem2_minus_sem1":
         return f"Semester 2 failed-unit change ({format_value(feature, value)})"
+    if feature == "Gender":
+        return f"Gender: {BINARY_LABELS['Gender'][1 if int(value) == 1 else 0]}"
     if feature in BINARY_LABELS:
         return BINARY_LABELS[feature][1 if int(value) == 1 else 0]
     if feature in {"Admission grade", "Previous qualification (grade)"}:
         return f"{label} ({format_value(feature, value)})"
     if feature == "Age at enrollment":
         return f"Age at enrollment ({format_value(feature, value)})"
+    if feature == "Course":
+        code = int(float(value))
+        return f"Course: {COURSE_LABELS.get(code, f'code {code}')}"
     if feature in CATEGORICAL_CODE_COLS:
         return f"{label} (code {int(float(value))})"
     if feature in {"Curricular units 1st sem (approved)", "Curricular units 2nd sem (approved)"}:

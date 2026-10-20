@@ -44,7 +44,8 @@ XGBoost model and an interactive risk assistant.
 1. Add `dataset_outliers_removed_balanced.csv` as a Kaggle dataset.
 2. Open this notebook in Kaggle.
 3. Click **Run all**. A CPU is enough; no GPU is required.
-4. Use the widget form near the bottom to get a prediction and explanation.
+4. Use the 14-field widget form near the bottom to get a prediction and
+   explanation.
 5. Download `student_dropout_project.zip` from `/kaggle/working`.
 
 ## What you get
@@ -54,7 +55,7 @@ XGBoost model and an interactive risk assistant.
 - Evaluation report, XGBoost importance, global SHAP, category contribution
 - `src/` modules for later local use
 - A Streamlit app for the local shift
-- An ipywidgets chatbot that works inside Kaggle
+- A 14-field ipywidgets chatbot that works inside Kaggle
 
 All preprocessing is fitted on the training split only. The test split is used
 only for final evaluation. `RANDOM_STATE = 42`.
@@ -789,11 +790,19 @@ code("%%writefile src/predict.py\n" + PREDICT)
 
 code(
     r"""
+from src.feature_engineering import (
+    APP_EXPLANATION_FEATURES,
+    APP_SECTIONS,
+    INT_INPUT_FIELDS,
+    field_options,
+)
 from src.predict import DropoutPredictor
 
 predictor = DropoutPredictor(models_dir=MODELS_DIR)
 
-default_result = predictor.predict(default_input_values)
+default_result = predictor.predict(
+    default_input_values, explanation_features=APP_EXPLANATION_FEATURES
+)
 print("Default sample student")
 print(json.dumps(default_result, indent=2, default=str)[:2500])
 
@@ -829,8 +838,12 @@ low_risk_student.update(
     }
 )
 
-high_result = predictor.predict(high_risk_student)
-low_result = predictor.predict(low_risk_student)
+high_result = predictor.predict(
+    high_risk_student, explanation_features=APP_EXPLANATION_FEATURES
+)
+low_result = predictor.predict(
+    low_risk_student, explanation_features=APP_EXPLANATION_FEATURES
+)
 
 for name, result in [
     ("High-risk example", high_result),
@@ -863,54 +876,23 @@ md(
     """
 ## Step 12 - Kaggle chatbot (ipywidgets)
 
-Fill the form, click **Predict Risk**, and the assistant shows the probability,
-risk level, key factors, category chart, and recommended actions. The chat box
-accepts `predict`, `use default student`, `explain risk`, and
-`show recommendations`. Kaggle does not render Streamlit inline, so this
-ipywidgets version is the in-notebook chatbot; the Streamlit app is exported for
-the later local shift.
+Fill the 14 core fields, click **Predict Risk**, and the assistant shows the
+probability, risk level, key factors, category chart, and recommended actions.
+Course names, female/male, and no/yes choices are shown as text instead of
+numeric codes. The chat box accepts `predict`, `use default student`,
+`explain risk`, and `show recommendations`.
+
+Only the fields in the form are shown as key factors. Other background fields
+(such as marital status, nationality, family occupation, application details,
+and macro indicators) are filled with typical training values. Kaggle does not
+render Streamlit inline, so this ipywidgets version is the in-notebook chatbot;
+the Streamlit app is exported for the later local shift.
 """
 )
 
 code(
     r'''
-FORM_SECTIONS = {
-    "Basic Information": [
-        "Marital status", "Application mode", "Application order", "Course",
-        "Daytime/evening attendance", "Previous qualification", "Nacionality",
-        "Gender", "Age at enrollment", "International", "Displaced",
-        "Educational special needs",
-    ],
-    "Family Background": [
-        "Mother's qualification", "Father's qualification",
-        "Mother's occupation", "Father's occupation",
-    ],
-    "Academic Entry": [
-        "Previous qualification (grade)", "Admission grade",
-    ],
-    "Financial Information": [
-        "Debtor", "Tuition fees up to date", "Scholarship holder",
-    ],
-    "Semester 1 Performance": [
-        "Curricular units 1st sem (credited)",
-        "Curricular units 1st sem (enrolled)",
-        "Curricular units 1st sem (evaluations)",
-        "Curricular units 1st sem (approved)",
-        "Curricular units 1st sem (grade)",
-        "Curricular units 1st sem (without evaluations)",
-    ],
-    "Semester 2 Performance": [
-        "Curricular units 2nd sem (credited)",
-        "Curricular units 2nd sem (enrolled)",
-        "Curricular units 2nd sem (evaluations)",
-        "Curricular units 2nd sem (approved)",
-        "Curricular units 2nd sem (grade)",
-        "Curricular units 2nd sem (without evaluations)",
-    ],
-    "Economic Indicators": [
-        "Unemployment rate", "Inflation rate", "GDP",
-    ],
-}
+FORM_SECTIONS = APP_SECTIONS
 
 RISK_COLORS = {
     "Low": "#2e7d32",
@@ -926,15 +908,14 @@ for section, fields in FORM_SECTIONS.items():
     rows = []
     for field in fields:
         default = default_input_values[field]
-        if field in BINARY_FLAG_COLS:
-            widget = widgets.Dropdown(
-                options=binary_options(field), value=int(default)
-            )
-        elif field in CATEGORICAL_CODE_COLS or field == "Age at enrollment":
+        options = field_options(field)
+        if options:
+            widget = widgets.Dropdown(options=options, value=int(default))
+        elif field in INT_INPUT_FIELDS:
             widget = widgets.IntText(value=int(default))
         else:
             widget = widgets.FloatText(value=float(default))
-        widget.layout = widgets.Layout(width="130px")
+        widget.layout = widgets.Layout(width="310px")
         form_widgets[field] = widget
         label = widgets.HTML(
             "<div style='width:285px;font-size:12px;line-height:1.2'>"
@@ -963,6 +944,22 @@ last_result = {"value": None}
 
 def read_form():
     return {field: widget.value for field, widget in form_widgets.items()}
+
+
+def read_full_form():
+    return {**default_input_values, **read_form()}
+
+
+def form_errors(values):
+    errors = []
+    for semester, label in (("1st", "1"), ("2nd", "2")):
+        enrolled = values[f"Curricular units {semester} sem (enrolled)"]
+        approved = values[f"Curricular units {semester} sem (approved)"]
+        if approved > enrolled:
+            errors.append(
+                f"Semester {label}: approved units cannot exceed enrolled units."
+            )
+    return errors
 
 
 def write_form(values):
@@ -1036,17 +1033,13 @@ def display_result(result):
                 + "</ul>"
             )
         )
-        if result["missing_fields_filled"]:
-            filled = ", ".join(
-                pretty_name(field)
-                for field in result["missing_fields_filled"]
+        display(
+            HTML(
+                "<p style='color:#777;font-size:12px'>Only the fields in the "
+                "form are shown as key factors. Other background fields use "
+                "typical training values.</p>"
             )
-            display(
-                HTML(
-                    "<p style='color:#ef6c00;font-size:12px'>"
-                    f"Filled missing values with training defaults: {filled}</p>"
-                )
-            )
+        )
         display(
             HTML(
                 f"<p style='color:#777;font-size:12px'>{result['disclaimer']}</p>"
@@ -1055,22 +1048,49 @@ def display_result(result):
 
 
 def on_predict(_):
-    display_result(predictor.predict(read_form()))
+    values = read_form()
+    errors = form_errors(values)
+    if errors:
+        output.clear_output()
+        with output:
+            for error in errors:
+                display(HTML(f"<p style='color:#c62828'>{error}</p>"))
+        return
+    display_result(
+        predictor.predict(
+            read_full_form(), explanation_features=APP_EXPLANATION_FEATURES
+        )
+    )
 
 
 def on_default(_):
     write_form(default_input_values)
-    display_result(predictor.predict(default_input_values))
+    display_result(
+        predictor.predict(
+            default_input_values,
+            explanation_features=APP_EXPLANATION_FEATURES,
+        )
+    )
 
 
 def on_high(_):
     write_form(high_risk_student)
-    display_result(predictor.predict(high_risk_student))
+    display_result(
+        predictor.predict(
+            high_risk_student,
+            explanation_features=APP_EXPLANATION_FEATURES,
+        )
+    )
 
 
 def on_low(_):
     write_form(low_risk_student)
-    display_result(predictor.predict(low_risk_student))
+    display_result(
+        predictor.predict(
+            low_risk_student,
+            explanation_features=APP_EXPLANATION_FEATURES,
+        )
+    )
 
 
 for button, callback in [
@@ -1098,16 +1118,26 @@ def on_chat(_):
     reply = ""
 
     if command in {"predict", "predict risk"}:
-        result = predictor.predict(read_form())
-        display_result(result)
-        reply = (
-            f"Estimated dropout probability: "
-            f"{result['dropout_probability_percent']}% "
-            f"({result['risk_level']} risk)."
-        )
+        values = read_form()
+        errors = form_errors(values)
+        if errors:
+            reply = "Please fix the form first: " + " ".join(errors)
+        else:
+            result = predictor.predict(
+                read_full_form(), explanation_features=APP_EXPLANATION_FEATURES
+            )
+            display_result(result)
+            reply = (
+                f"Estimated dropout probability: "
+                f"{result['dropout_probability_percent']}% "
+                f"({result['risk_level']} risk)."
+            )
     elif command in {"use default student", "default"}:
         write_form(default_input_values)
-        result = predictor.predict(default_input_values)
+        result = predictor.predict(
+            default_input_values,
+            explanation_features=APP_EXPLANATION_FEATURES,
+        )
         display_result(result)
         reply = (
             "Loaded the default student. "

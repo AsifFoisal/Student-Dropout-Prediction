@@ -95,20 +95,23 @@ only.
 
 Scroll to **Step 12**. You will see:
 
-- A collapsible form with these sections:
-  - Basic Information
-  - Family Background
-  - Academic Entry
-  - Financial Information
-  - Semester 1 Performance
-  - Semester 2 Performance
-  - Economic Indicators
+- A collapsible 14-field form with these sections:
+  - Student details: course, age, gender, displaced status
+  - Academic performance: admission grade, semester 1/2 enrolled units,
+    approved units, and grades
+  - Financial support: tuition-fee status, debt status, scholarship status
+- Course names, female/male, and no/yes choices are shown as text instead of
+  numeric codes.
 - Four buttons:
   - **Predict Risk**
   - **Use Default Student**
   - **High-Risk Example**
   - **Low-Risk Example**
 - A chat box.
+
+Only these 14 core fields are requested. Marital status, nationality, family
+occupation, application details, and macro indicators are filled with typical
+training values and are left out of the visible key-factor list.
 
 ### Buttons
 
