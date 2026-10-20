@@ -1,0 +1,101 @@
+{
+  "dropout_probability": 0.9833,
+  "dropout_probability_percent": 98.3,
+  "risk_level": "Critical",
+  "predicted_dropout": 1,
+  "threshold_used": 0.3435,
+  "top_reasons": [
+    {
+      "feature": "Tuition fees up to date",
+      "feature_label": "Tuition fees up to date",
+      "category": "Financial",
+      "value": 0.0,
+      "encoded_value": 0.0,
+      "shap_value": 1.538385,
+      "percent_contribution": 28.65,
+      "direction": "increases risk",
+      "reason": "Tuition fees not up to date"
+    },
+    {
+      "feature": "overall_approval_rate",
+      "feature_label": "Overall approval rate",
+      "category": "Engagement",
+      "value": 0.0,
+      "encoded_value": 0.0,
+      "shap_value": 0.657037,
+      "percent_contribution": 12.24,
+      "direction": "increases risk",
+      "reason": "Low overall approval rate (0%)"
+    },
+    {
+      "feature": "total_failed_units",
+      "feature_label": "Total failed units",
+      "category": "Engagement",
+      "value": 12.0,
+      "encoded_value": 12.0,
+      "shap_value": 0.58683,
+      "percent_contribution": 10.93,
+      "direction": "increases risk",
+      "reason": "Total failed units (12)"
+    },
+    {
+      "feature": "approval_rate_sem2",
+      "feature_label": "Semester 2 approval rate",
+      "category": "Engagement",
+      "value": 0.0,
+      "encoded_value": 0.0,
+      "shap_value": 0.470232,
+      "percent_contribution": 8.76,
+      "direction": "increases risk",
+      "reason": "Low semester 2 approval rate (0%)"
+    },
+    {
+      "feature": "Curricular units 2nd sem (approved)",
+      "feature_label": "Semester 2 approved units",
+      "category": "Engagement",
+      "value": 0.0,
+      "encoded_value": 0.0,
+      "shap_value": 0.205951,
+      "percent_contribution": 3.84,
+      "direction": "increases risk",
+      "reason": "0 approved units in semester 2"
+    }
+  ],
+  "category_contributions": [
+    {
+      "category": "Engagement",
+      "percent_contribution": 49.1
+    },
+    {
+      "category": "Financial",
+      "percent_contribution": 32.49
+    },
+    {
+      "category": "Demographic",
+      "percent_contribution": 5.6
+    },
+    {
+      "category": "Institutional/Course",
+      "percent_contribution": 5.05
+    },
+    {
+      "category": "Macro-Economic",
+      "percent_contribution": 4.19
+    },
+    {
+      "category": "Academic",
+      "percent_contribution": 3.57
+    }
+  ],
+  "recommendations": [
+    "Contact the student for a supportive check-in.",
+    "Create a study recovery plan.",
+    "Monitor assignment and exam participation.",
+    "Assign a peer buddy or mentor.",
+    "Schedule a counselor meeting.",
+    "Review financial aid, scholarship, and payment-plan options."
+  ],
+  "missing_fields_filled": [],
+  "ignored_fields": [],
+  "disclaimer": "This prediction is a decision-support tool and should not be used as the final decision. Human review is required."
+}

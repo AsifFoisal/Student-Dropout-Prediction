@@ -1,0 +1,7 @@
+category,mean_abs_shap,percent_contribution
+Engagement,2.0937634,52.7253
+Financial,0.5235409,13.183845
+Demographic,0.4885643,12.303061
+Institutional/Course,0.3485097,8.7761965
+Academic,0.32200855,8.108842
+Macro-Economic,0.19469225,4.902754

@@ -1,0 +1,64 @@
+feature,importance
+overall_approval_rate,0.19966044
+total_failed_units,0.17144746
+failed_units_sem2,0.09192056
+approval_rate_sem2,0.07119142
+Tuition fees up to date,0.041007183
+Curricular units 2nd sem (approved),0.022466952
+low_approval_sem2,0.018911172
+Debtor,0.017067732
+Course,0.01203076
+low_approval_both_semesters,0.011597761
+total_credited_units,0.010802787
+Age at enrollment,0.010128534
+total_approved_units,0.009834716
+approved_difference_sem2_minus_sem1,0.009737233
+approval_rate_difference_sem2_minus_sem1,0.0096615935
+total_without_evaluations,0.008765409
+Gender,0.008732543
+Father's qualification,0.008510659
+Curricular units 2nd sem (credited),0.008468077
+approval_rate_sem1,0.008461881
+Curricular units 1st sem (without evaluations),0.008251069
+overall_average_grade,0.008250769
+failed_difference_sem2_minus_sem1,0.00820877
+Displaced,0.008166702
+Scholarship holder,0.008130888
+Curricular units 2nd sem (grade),0.008065635
+Curricular units 2nd sem (without evaluations),0.0077779167
+Curricular units 1st sem (grade),0.007764363
+Father's occupation,0.0077276644
+effective_avg_grade_sem2,0.0076526124
+Curricular units 2nd sem (enrolled),0.0076172906
+Application order,0.0074325665
+Previous qualification (grade),0.007336954
+Curricular units 2nd sem (evaluations),0.007277794
+Previous qualification,0.007272755
+Admission grade,0.0072607812
+grade_difference_sem2_minus_sem1,0.00716851
+overall_evaluation_to_enrolled_ratio,0.0070322696
+total_enrolled_units,0.006821618
+Unemployment rate,0.0067793434
+Mother's qualification,0.0067361523
+Curricular units 1st sem (approved),0.006574653
+Mother's occupation,0.006566475
+Application mode,0.006470375
+evaluation_to_enrolled_ratio_sem2,0.006328584
+evaluation_to_enrolled_ratio_sem1,0.006306365
+effective_avg_grade_sem1,0.006283434
+failed_units_sem1,0.0062712976
+GDP,0.006268867
+Curricular units 1st sem (enrolled),0.0062072766
+Inflation rate,0.0061656674
+total_evaluations,0.0057741585
+Marital status,0.0054131695
+Curricular units 1st sem (evaluations),0.0053074015
+International,0.0051676263
+Daytime/evening attendance,0.0044909255
+low_approval_sem1,0.0012664848
+Nacionality,0.0
+Educational special needs,0.0
+Curricular units 1st sem (credited),0.0
+no_approved_sem1,0.0
+no_approved_sem2,0.0
+no_approved_both_semesters,0.0
